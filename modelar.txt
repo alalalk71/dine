@@ -1,0 +1,10 @@
+project/
+│
+├─ main.py              # فایل اصلی
+├─ indicators/
+│   ├─ __init__.py      # برای شناخته شدن فولدر به عنوان پکیج
+│   ├─ rsi.py           # توابع محاسبه RSI و RSI MA
+│   ├─ macd.py          # توابع محاسبه MACD
+│   ├─ zigzag.py        # توابع ZigZag و دایورجنس
+│   └─ ma.py            # توابع محاسبه MA و cross ها
+└─ utils.py             # توابع کمکی مثل format_cell و ذخیره HTML
