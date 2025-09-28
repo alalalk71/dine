@@ -5,8 +5,8 @@ from indicators.ma import compute_ma_cross, compute_ma_cross_lookback
 from indicators.zigzag import detect_divergence_with_zigzag
 from utils import format_cell, save_html
 
-API_KEY = ""
-API_SECRET = ""
+API_KEY = "87AE73883EA94CFA974DACFCB02C5981"
+API_SECRET = "677BB651D0628A51F8F357B78D3BE2897171ECFA5"
 PROXY = 'socks5h://127.0.0.1:2080'
 REQUEST_TFS = ["12h","1d","3d","1w"]
 MAX_CANDLES = 500
@@ -90,4 +90,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
