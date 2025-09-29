@@ -8,6 +8,8 @@
   h3 { margin-top: 20px; margin-bottom: 5px; }
   .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .checkbox-row div { display: flex; align-items: center; gap: 3px; }
+  .field-group { margin-bottom: 15px; }
+  .field-group-title { font-weight: bold; margin-bottom: 5px; display: block; }
   table { border-collapse: collapse; margin-top: 20px; width: 100%; table-layout: fixed; }
   th, td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: top; font-size: 12px; }
   th { background-color: #000; color: #fff; position: sticky; z-index: 3; }
@@ -20,16 +22,20 @@
 <body>
 
 <h2>انتخاب دسته‌بندی</h2>
-<div id="categories" class="checkbox-row"></div>
 <div>
   <input type="checkbox" id="all_categories"><label for="all_categories">All Categories</label>
 </div>
+<div>
+  <input type="radio" name="logic" id="logic_and" value="and" checked><label for="logic_and">AND</label>
+  <input type="radio" name="logic" id="logic_or" value="or"><label for="logic_or">OR</label>
+</div>
+<div id="categories" class="checkbox-row"></div>
 
 <h3>تایم فریم‌ها</h3>
 <div id="timeframes" class="checkbox-row"></div>
 
 <h3>فیلدها</h3>
-<div id="fields" class="checkbox-row"></div>
+<div id="fields"></div>
 
 <button onclick="generateTable()">نمایش جدول</button>
 
@@ -38,7 +44,13 @@
 <script>
 const dataUrl = 'https://raw.githubusercontent.com/alalalk71/dine/refs/heads/main/data.json';
 const timeframesList = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d","3d","1w"];
-const fieldsList = ["cm55","m55","m200","cm200","dm","dr","mr","sros","srob","srd","cci14_ob","cci14_os","cci14_s","cci14_n","cci14_m","cci50_ob","cci50_os","cci50_s","cci50_n","cci50_m","obv_dn","obv_ds","obv_m"];
+
+const fieldGroups = {
+  "Moving Average": ["cm55","m55","m200","cm200"],
+  "MACD + RSI + Stoch RSI": ["dm","dr","mr","sros","srob","srd"],
+  "CCI 14 & 50": ["cci14_ob","cci14_os","cci14_s","cci14_n","cci14_m","cci50_ob","cci50_os","cci50_s","cci50_n","cci50_m"],
+  "OBV": ["obv_dn","obv_ds","obv_m"]
+};
 
 async function loadData() {
   const res = await fetch(dataUrl);
@@ -81,31 +93,45 @@ async function init() {
   });
 
   const fieldContainer = document.getElementById('fields');
-  fieldsList.forEach(f => {
-    const div = document.createElement('div');
-    const label = document.createElement('label');
-    label.textContent = f;
-    const cbTrue = document.createElement('input');
-    cbTrue.type = 'checkbox';
-    cbTrue.id = `field_${f}_true`;
-    const cbFalse = document.createElement('input');
-    cbFalse.type = 'checkbox';
-    cbFalse.id = `field_${f}_false`;
-    div.appendChild(label);
-    div.appendChild(cbTrue);
-    div.appendChild(document.createTextNode('✅'));
-    div.appendChild(cbFalse);
-    div.appendChild(document.createTextNode('❌'));
-    fieldContainer.appendChild(div);
+  Object.keys(fieldGroups).forEach(groupName => {
+    const groupDiv = document.createElement('div');
+    groupDiv.classList.add('field-group');
+    const title = document.createElement('span');
+    title.classList.add('field-group-title');
+    title.textContent = groupName + ':';
+    groupDiv.appendChild(title);
+
+    fieldGroups[groupName].forEach(f => {
+      const div = document.createElement('div');
+      const label = document.createElement('label');
+      label.textContent = f;
+      const cbTrue = document.createElement('input');
+      cbTrue.type = 'checkbox';
+      cbTrue.id = `field_${f}_true`;
+      const cbFalse = document.createElement('input');
+      cbFalse.type = 'checkbox';
+      cbFalse.id = `field_${f}_false`;
+      div.appendChild(label);
+      div.appendChild(cbTrue);
+      div.appendChild(document.createTextNode('✅'));
+      div.appendChild(cbFalse);
+      div.appendChild(document.createTextNode('❌'));
+      groupDiv.appendChild(div);
+    });
+
+    fieldContainer.appendChild(groupDiv);
   });
 }
 
-function coinMatchesFilters(data, coin, selectedCats, selectedTFs, selectedFields) {
-  // AND logic: must match ALL selectedTFs & fields
+function coinMatchesFilters(data, coin, selectedCats, selectedTFs, selectedFields, logicType) {
+  // logicType: 'and' or 'or'
+  let globalMatch = (logicType === 'and');
+
   for (const tf of selectedTFs) {
     for (const field of Object.keys(selectedFields)) {
-      const requiredValue = selectedFields[field]; // true => ✅, false => ❌
+      const requiredValue = selectedFields[field];
       let matchInAnyCat = false;
+
       for (const cat of selectedCats) {
         if (data[cat] && data[cat][coin] && data[cat][coin][tf]) {
           const value = data[cat][coin][tf][field + '_fmt'];
@@ -115,10 +141,12 @@ function coinMatchesFilters(data, coin, selectedCats, selectedTFs, selectedField
           }
         }
       }
-      if (!matchInAnyCat) return false; // failed for this tf+field
+
+      if (logicType === 'and' && !matchInAnyCat) return false;
+      if (logicType === 'or' && matchInAnyCat) return true;
     }
   }
-  return true; // passed all
+  return logicType === 'and';
 }
 
 async function generateTable() {
@@ -129,12 +157,14 @@ async function generateTable() {
   const selectedTFs = Array.from(document.querySelectorAll('#timeframes input:checked')).map(cb => cb.id.replace('tf_',''));
 
   const selectedFields = {};
-  fieldsList.forEach(f => {
+  Object.values(fieldGroups).flat().forEach(f => {
     const trueCB = document.getElementById(`field_${f}_true`);
     const falseCB = document.getElementById(`field_${f}_false`);
     if (trueCB.checked) selectedFields[f] = true;
     if (falseCB.checked) selectedFields[f] = false;
   });
+
+  const logicType = document.querySelector('input[name="logic"]:checked').value;
 
   if(selectedCats.length === 0 || selectedTFs.length === 0 || Object.keys(selectedFields).length === 0){
     resultContainer.innerHTML = "<p>لطفاً حداقل یک دسته‌بندی، تایم‌فریم و فیلد انتخاب کنید.</p>";
@@ -146,10 +176,9 @@ async function generateTable() {
     if (data[cat]) Object.keys(data[cat]).forEach(coin => allCoins.add(coin));
   });
 
-  allCoins = Array.from(allCoins).filter(coin => coinMatchesFilters(data, coin, selectedCats, selectedTFs, selectedFields));
+  allCoins = Array.from(allCoins).filter(coin => coinMatchesFilters(data, coin, selectedCats, selectedTFs, selectedFields, logicType));
   allCoins.sort();
 
-  // Build table header
   let tableHTML = '<table><thead><tr><th class="tf-top" rowspan="2">کوین</th>';
   selectedTFs.forEach(tf => {
     tableHTML += `<th class="tf-top" colspan="${Object.keys(selectedFields).length}">${tf}</th>`;
