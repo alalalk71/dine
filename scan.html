@@ -2,7 +2,7 @@
 <html lang="fa">
 <head>
 <meta charset="UTF-8">
-<title>Scan Matrix Corrected Header</title>
+<title>Scan Matrix JSON Corrected</title>
 <style>
   body { font-family: Tahoma, sans-serif; padding: 20px; }
   h3 { margin-top: 20px; margin-bottom: 5px; }
@@ -35,7 +35,9 @@
 const dataUrl = 'https://raw.githubusercontent.com/alalalk71/dine/refs/heads/main/data.json';
 
 const timeframesList = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d","3d","1w"];
-const fieldsList = ["CM55","M55","M200","CM200","DM","DR","MR","SROS","SROB","SRD","CCI14 OB","CCI14 OS","CCI14 S","CCI14 N","CCI14 M","CCI50 OB","CCI50 OS","CCI50 S","CCI50 N","CCI50 M","OBV DN","OBV DS","OBV M"];
+const fieldsList = ["cm55","m55","m200","cm200","dm","dr","mr","sros","srob","srd",
+"cci14_ob","cci14_os","cci14_s","cci14_n","cci14_m","cci50_ob","cci50_os","cci50_s",
+"cci50_n","cci50_m","obv_dn","obv_ds","obv_m"];
 
 async function loadData() {
     const res = await fetch(dataUrl);
@@ -87,14 +89,10 @@ async function generateTable() {
         return;
     }
 
-    // استخراج کوین‌ها فقط از دسته‌بندی‌ها و تایم فریم‌های انتخاب شده
+    // استخراج کوین‌ها فقط از دسته‌بندی‌های انتخاب شده
     let allCoins = new Set();
     selectedCats.forEach(cat => {
-        selectedTFs.forEach(tf => {
-            if(data[cat] && data[cat][tf]){
-                Object.keys(data[cat][tf]).forEach(coin => allCoins.add(coin));
-            }
-        });
+        Object.keys(data[cat]).forEach(coin => allCoins.add(coin));
     });
     allCoins = Array.from(allCoins).sort();
 
@@ -124,12 +122,12 @@ async function generateTable() {
             selectedFields.forEach(f => {
                 let exists = false;
                 for(const cat of selectedCats){
-                    if(data[cat] && data[cat][tf] && data[cat][tf][coin] && data[cat][tf][coin][f] !== undefined){
+                    if(data[cat] && data[cat][coin] && data[cat][coin][tf] && data[cat][coin][tf][f + "_fmt"] !== undefined){
                         exists = true;
                         break;
                     }
                 }
-                tableHTML += `<td>${exists ? '✅' : '❌'}</td>`;
+                tableHTML += `<td>${exists ? data[selectedCats[0]][coin][tf][f + "_fmt"] : '❌'}</td>`;
             });
         });
         tableHTML += '</tr>';
