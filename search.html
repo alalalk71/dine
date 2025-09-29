@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>Filtered Coin Scanner</title>
+<style>
+body { font-family: Arial; background:#f4f4f4; padding:20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 12px; }
+th { background: #222; color: #fff; }
+.symbol-name { font-weight:bold; color:aquamarine; background:#222; }
+.nd { color:#999; font-style: italic; }
+.green { color: green; font-weight: bold; }
+.red { color: red; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>Filtered Coin Scanner</h2>
+
+<div>
+    <h3>دسته‌بندی‌ها</h3>
+    <div id="category-filters"></div>
+
+    <h3>تایم فریم‌ها</h3>
+    <div id="tf-filters"></div>
+
+    <h3>شاخص‌ها</h3>
+    <div id="indicator-filters"></div>
+
+    <button onclick="applyFilters()">اعمال فیلتر</button>
+    <button onclick="saveFilteredHTML()">ذخیره HTML نهایی</button>
+</div>
+
+<hr>
+<table id="coin-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>نماد</th>
+            <th>Timeframe</th>
+            <th>Indicator</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+// ==== تنظیمات اولیه ====
+const DATA_JSON = "data.json"; // مسیر فایل JSON
+let allData = {};
+let filteredData = {};
+
+// شاخص‌ها
+const INDICATORS = [
+  "CM55","M55","M200","CM200","DM","DR","MR",
+  "SROS","SROB","SRD",
+  "CCI14 OB","CCI14 OS","CCI14 S","CCI14 N","CCI14 M",
+  "CCI50 OB","CCI50 OS","CCI50 S","CCI50 N","CCI50 M",
+  "OBV DN","OBV DS","OBV M"
+];
+
+// تایم فریم‌ها
+const TIMEFRAMES = ["12h","1d","3d","1w"];
+
+// ==== بارگذاری داده از JSON ====
+fetch(DATA_JSON)
+  .then(resp => resp.json())
+  .then(data => {
+    allData = data;
+    setupFilters();
+    renderTable();
+  });
+
+// ==== ساخت چک‌باکس‌ها ====
+function setupFilters() {
+    const categoryDiv = document.getElementById("category-filters");
+    const tfDiv = document.getElementById("tf-filters");
+    const indDiv = document.getElementById("indicator-filters");
+
+    // دسته‌بندی‌ها
+    Object.keys(allData).forEach(cat => {
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = cat;
+        cb.id = `cat-${cat}`;
+        cb.checked = true;
+        const label = document.createElement("label");
+        label.innerText = cat;
+        label.htmlFor = `cat-${cat}`;
+        categoryDiv.appendChild(cb);
+        categoryDiv.appendChild(label);
+        categoryDiv.appendChild(document.createElement("br"));
+    });
+
+    // تایم فریم‌ها
+    TIMEFRAMES.forEach(tf => {
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = tf;
+        cb.id = `tf-${tf}`;
+        cb.checked = true;
+        const label = document.createElement("label");
+        label.innerText = tf;
+        label.htmlFor = `tf-${tf}`;
+        tfDiv.appendChild(cb);
+        tfDiv.appendChild(label);
+        tfDiv.appendChild(document.createElement("br"));
+    });
+
+    // شاخص‌ها
+    INDICATORS.forEach(ind => {
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = ind;
+        cb.id = `ind-${ind}`;
+        cb.checked = true;
+        const label = document.createElement("label");
+        label.innerText = ind;
+        label.htmlFor = `ind-${ind}`;
+        indDiv.appendChild(cb);
+        indDiv.appendChild(label);
+        indDiv.appendChild(document.createElement("br"));
+    });
+}
+
+// ==== اعمال فیلتر و رندر جدول ====
+function applyFilters() {
+    const selectedCats = Array.from(document.querySelectorAll("#category-filters input:checked")).map(cb=>cb.value);
+    const selectedTFs = Array.from(document.querySelectorAll("#tf-filters input:checked")).map(cb=>cb.value);
+    const selectedInds = Array.from(document.querySelectorAll("#indicator-filters input:checked")).map(cb=>cb.value);
+
+    filteredData = {};
+
+    selectedCats.forEach(cat => {
+        if(allData[cat]){
+            filteredData[cat] = {};
+            Object.keys(allData[cat]).forEach(symbol=>{
+                filteredData[cat][symbol] = {};
+                selectedTFs.forEach(tf=>{
+                    if(allData[cat][symbol][tf]){
+                        filteredData[cat][symbol][tf] = {};
+                        selectedInds.forEach(ind=>{
+                            const key = ind.replace(/ /g,"_").toLowerCase() + "_fmt";
+                            if(allData[cat][symbol][tf][key] !== undefined){
+                                filteredData[cat][symbol][tf][key] = allData[cat][symbol][tf][key];
+                            }
+                        });
+                    }
+                });
+            });
+        }
+    });
+
+    renderTable();
+}
+
+// ==== رندر جدول ====
+function renderTable() {
+    const tbody = document.querySelector("#coin-table tbody");
+    tbody.innerHTML = "";
+
+    let idx = 1;
+    Object.keys(filteredData).forEach(cat=>{
+        Object.keys(filteredData[cat]).forEach(symbol=>{
+            Object.keys(filteredData[cat][symbol]).forEach(tf=>{
+                Object.keys(filteredData[cat][symbol][tf]).forEach(indKey=>{
+                    const val = filteredData[cat][symbol][tf][indKey][0]; // مقدار
+                    const cls = filteredData[cat][symbol][tf][indKey][1]; // کلاس css
+
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${idx}</td>
+                        <td class="symbol-name">${symbol}</td>
+                        <td>${tf}</td>
+                        <td>${indKey}</td>
+                        <td class="${cls}">${val}</td>
+                    `;
+                    tbody.appendChild(tr);
+                    idx++;
+                });
+            });
+        });
+    });
+}
+
+// ==== ذخیره HTML نهایی ====
+function saveFilteredHTML() {
+    const htmlContent = document.documentElement.outerHTML;
+    const now = new Date().toISOString().replace(/[:.]/g,"-");
+    const blob = new Blob([htmlContent], {type: "text/html;charset=utf-8"});
+    const fileName = `final/FilteredCoins_${now}.html`;
+
+    // ایجاد فولدر اگر وجود ندارد
+    if(!window.fsCreated){
+        const dir = 'final';
+        try { window.fsCreated = true; } catch(e){ }
+    }
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+}
+</script>
+
+</body>
+</html>
