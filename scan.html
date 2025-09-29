@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>Scan</title>
+<style>
+  body { font-family: Tahoma, sans-serif; padding: 20px; }
+  h3 { margin-top: 20px; margin-bottom: 5px; }
+  .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .checkbox-row div { display: flex; align-items: center; gap: 3px; }
+  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+  th, td { border: 1px solid #333; padding: 5px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h2>انتخاب دسته‌بندی، تایم فریم و فیلدها</h2>
+
+<h3>دسته‌بندی‌ها</h3>
+<div id="categories" class="checkbox-row"></div>
+
+<h3>تایم فریم‌ها</h3>
+<div id="timeframes" class="checkbox-row"></div>
+
+<h3>فیلدها</h3>
+<div id="fields" class="checkbox-row"></div>
+
+<button onclick="generateTable()">نمایش جدول</button>
+
+<div id="result"></div>
+
+<script>
+const dataUrl = 'https://raw.githubusercontent.com/alalalk71/dine/refs/heads/main/data.json';
+
+const timeframesList = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d","3d","1w"];
+const fieldsList = ["CM55","M55","M200","CM200","DM","DR","MR","SROS","SROB","SRD","CCI14 OB","CCI14 OS","CCI14 S","CCI14 N","CCI14 M","CCI50 OB","CCI50 OS","CCI50 S","CCI50 N","CCI50 M","OBV DN","OBV DS","OBV M"];
+
+async function loadData() {
+    const res = await fetch(dataUrl);
+    return await res.json();
+}
+
+function createCheckbox(id, label) {
+    const div = document.createElement('div');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = id;
+    const lbl = document.createElement('label');
+    lbl.htmlFor = id;
+    lbl.textContent = label;
+    div.appendChild(cb);
+    div.appendChild(lbl);
+    return div;
+}
+
+async function init() {
+    const data = await loadData();
+
+    const catContainer = document.getElementById('categories');
+    Object.keys(data).forEach(cat => {
+        const cbDiv = createCheckbox('cat_' + cat, cat);
+        catContainer.appendChild(cbDiv);
+    });
+
+    const tfContainer = document.getElementById('timeframes');
+    timeframesList.forEach(tf => {
+        const cbDiv = createCheckbox('tf_' + tf, tf);
+        tfContainer.appendChild(cbDiv);
+    });
+
+    const fieldContainer = document.getElementById('fields');
+    fieldsList.forEach(f => {
+        const cbDiv = createCheckbox('field_' + f, f);
+        fieldContainer.appendChild(cbDiv);
+    });
+}
+
+async function generateTable() {
+    const data = await loadData();
+    const resultContainer = document.getElementById('result');
+
+    // دسته‌بندی‌های انتخاب شده
+    const selectedCats = Array.from(document.querySelectorAll('#categories input:checked')).map(cb => cb.id.replace('cat_',''));
+    // تایم فریم‌های انتخاب شده
+    const selectedTFs = Array.from(document.querySelectorAll('#timeframes input:checked')).map(cb => cb.id.replace('tf_',''));
+    // فیلدهای انتخاب شده
+    const selectedFields = Array.from(document.querySelectorAll('#fields input:checked')).map(cb => cb.id.replace('field_',''));
+
+    if(selectedCats.length === 0 || selectedTFs.length === 0 || selectedFields.length === 0){
+        resultContainer.innerHTML = "<p>لطفاً حداقل یک دسته‌بندی، یک تایم فریم و یک فیلد انتخاب کنید.</p>";
+        return;
+    }
+
+    let tableHTML = '<table><tr><th>دسته‌بندی</th><th>تایم فریم</th>';
+    selectedFields.forEach(f => tableHTML += `<th>${f}</th>`);
+    tableHTML += '</tr>';
+
+    selectedCats.forEach(cat => {
+        selectedTFs.forEach(tf => {
+            tableHTML += `<tr><td>${cat}</td><td>${tf}</td>`;
+            selectedFields.forEach(f => {
+                const value = (data[cat] && data[cat][tf] && data[cat][tf][f] !== undefined) ? data[cat][tf][f] : '';
+                tableHTML += `<td>${value}</td>`;
+            });
+            tableHTML += '</tr>';
+        });
+    });
+
+    tableHTML += '</table>';
+    resultContainer.innerHTML = tableHTML;
+}
+
+init();
+</script>
+
+</body>
+</html>
