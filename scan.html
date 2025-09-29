@@ -8,8 +8,10 @@
   h3 { margin-top: 20px; margin-bottom: 5px; }
   .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .checkbox-row div { display: flex; align-items: center; gap: 3px; }
-  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
-  th, td { border: 1px solid #333; padding: 5px; text-align: center; }
+  table { border-collapse: collapse; margin-top: 20px; width: 100%; table-layout: fixed; }
+  th, td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: top; }
+  th { background-color: #eee; }
+  .field-values { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -36,7 +38,7 @@ const timeframesList = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d
 const fieldsList = ["CM55","M55","M200","CM200","DM","DR","MR","SROS","SROB","SRD","CCI14 OB","CCI14 OS","CCI14 S","CCI14 N","CCI14 M","CCI50 OB","CCI50 OS","CCI50 S","CCI50 N","CCI50 M","OBV DN","OBV DS","OBV M"];
 
 async function loadData() {
-    const res = await fetch('data.json'); // مسیر نسبی به همان فولدر
+    const res = await fetch(dataUrl);
     return await res.json();
 }
 
@@ -91,19 +93,40 @@ async function generateTable() {
         return;
     }
 
-    let tableHTML = '<table><tr><th>دسته‌بندی</th><th>تایم فریم</th>';
-    selectedFields.forEach(f => tableHTML += `<th>${f}</th>`);
+    // ابتدا تمام کوین‌ها را از دسته‌بندی‌های انتخاب شده استخراج کنیم
+    let allCoins = new Set();
+    selectedCats.forEach(cat => {
+        Object.keys(data[cat]).forEach(tf => {
+            Object.keys(data[cat][tf]).forEach(coin => {
+                allCoins.add(coin);
+            });
+        });
+    });
+
+    allCoins = Array.from(allCoins).sort();
+
+    // ساختار جدول
+    let tableHTML = '<table><tr><th>کوین</th>';
+    selectedTFs.forEach(tf => tableHTML += `<th>${tf}</th>`);
     tableHTML += '</tr>';
 
-    selectedCats.forEach(cat => {
+    allCoins.forEach(coin => {
+        tableHTML += `<tr><td>${coin}</td>`;
         selectedTFs.forEach(tf => {
-            tableHTML += `<tr><td>${cat}</td><td>${tf}</td>`;
-            selectedFields.forEach(f => {
-                const value = (data[cat] && data[cat][tf] && data[cat][tf][f] !== undefined) ? data[cat][tf][f] : '';
-                tableHTML += `<td>${value}</td>`;
+            let cellHTML = '<div class="field-values">';
+            selectedCats.forEach(cat => {
+                if(data[cat] && data[cat][tf] && data[cat][tf][coin]){
+                    selectedFields.forEach(f => {
+                        if(data[cat][tf][coin][f] !== undefined){
+                            cellHTML += `<div>${f}: ${data[cat][tf][coin][f]}</div>`;
+                        }
+                    });
+                }
             });
-            tableHTML += '</tr>';
+            cellHTML += '</div>';
+            tableHTML += `<td>${cellHTML}</td>`;
         });
+        tableHTML += '</tr>';
     });
 
     tableHTML += '</table>';
