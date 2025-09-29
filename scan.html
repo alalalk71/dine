@@ -2,16 +2,65 @@
 <html lang="fa">
 <head>
 <meta charset="UTF-8">
-<title>Scan Matrix Final</title>
+<title>Scan Matrix Sticky Header</title>
 <style>
   body { font-family: Tahoma, sans-serif; padding: 20px; }
   h3 { margin-top: 20px; margin-bottom: 5px; }
   .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .checkbox-row div { display: flex; align-items: center; gap: 3px; }
-  table { border-collapse: collapse; margin-top: 20px; width: 100%; table-layout: fixed; }
-  th, td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; font-size: 14px; }
-  th { background-color: #eee; }
-  th.tf-header { background-color: #ddd; font-weight: bold; }
+
+  /* Container for scroll */
+  .table-container {
+    overflow: auto; /* Enable scroll */
+    max-height: 600px; /* Fixed height for vertical scroll */
+    width: 100%;
+  }
+
+  /* Table Styles */
+  table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    table-layout: fixed;
+  }
+
+  th, td {
+    border: 1px solid #333; 
+    padding: 5px; 
+    text-align: center; 
+    vertical-align: middle; 
+    font-size: 14px; 
+  }
+
+  /* Sticky headers */
+  th {
+    position: sticky; 
+    top: 0; 
+    z-index: 2;
+    background-color: #000; /* هدر مشکی */
+    color: #fff; /* متن سفید */
+  }
+
+  /* Sticky first column (coin names) */
+  td:first-child, th:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #000; /* هدر مشکی برای th و زمینه کوین */
+    color: #fff;
+    z-index: 3;
+    border-right: 3px solid black; /* مرز 3px مشکی */
+  }
+
+  /* مرز بین تایم فریم‌ها */
+  th.tf-header {
+    border-right: 3px solid black;
+  }
+
+  /* Hover روی کوین‌ها */
+  td:first-child:hover {
+    background-color: #000;
+    color: #fff;
+  }
+
 </style>
 </head>
 <body>
@@ -29,7 +78,7 @@
 
 <button onclick="generateTable()">نمایش جدول</button>
 
-<div id="result"></div>
+<div class="table-container" id="result"></div>
 
 <script>
 const dataUrl = 'https://raw.githubusercontent.com/alalalk71/dine/refs/heads/main/data.json';
@@ -102,7 +151,7 @@ async function generateTable() {
     // ردیف اول: تایم فریم‌ها با colspan
     tableHTML += '<tr><th rowspan="2">کوین</th>';
     selectedTFs.forEach(tf => {
-        tableHTML += `<th colspan="${selectedFields.length}">${tf}</th>`;
+        tableHTML += `<th class="tf-header" colspan="${selectedFields.length}">${tf}</th>`;
     });
     tableHTML += '</tr>';
 
