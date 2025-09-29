@@ -2,7 +2,7 @@
 <html lang="fa">
 <head>
 <meta charset="UTF-8">
-<title>Scan Matrix JSON Corrected</title>
+<title>Scan Matrix Final</title>
 <style>
   body { font-family: Tahoma, sans-serif; padding: 20px; }
   h3 { margin-top: 20px; margin-bottom: 5px; }
@@ -89,7 +89,7 @@ async function generateTable() {
         return;
     }
 
-    // استخراج کوین‌ها فقط از دسته‌بندی‌های انتخاب شده
+    // استخراج کوین‌ها
     let allCoins = new Set();
     selectedCats.forEach(cat => {
         Object.keys(data[cat]).forEach(coin => allCoins.add(coin));
@@ -120,14 +120,14 @@ async function generateTable() {
         tableHTML += `<tr><td>${coin}</td>`;
         selectedTFs.forEach(tf => {
             selectedFields.forEach(f => {
-                let exists = false;
+                let value = '❌';
                 for(const cat of selectedCats){
                     if(data[cat] && data[cat][coin] && data[cat][coin][tf] && data[cat][coin][tf][f + "_fmt"] !== undefined){
-                        exists = true;
+                        value = data[cat][coin][tf][f + "_fmt"];
                         break;
                     }
                 }
-                tableHTML += `<td>${exists ? data[selectedCats[0]][coin][tf][f + "_fmt"] : '❌'}</td>`;
+                tableHTML += `<td>${value}</td>`;
             });
         });
         tableHTML += '</tr>';
