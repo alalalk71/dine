@@ -11,12 +11,11 @@
 
   /* Container for scroll */
   .table-container {
-    overflow: auto; /* Enable scroll */
-    max-height: 600px; /* Fixed height for vertical scroll */
+    overflow: auto;
+    max-height: 600px; 
     width: 100%;
   }
 
-  /* Table Styles */
   table { 
     border-collapse: collapse; 
     width: 100%; 
@@ -32,25 +31,33 @@
   }
 
   /* Sticky headers */
-  th {
-    position: sticky; 
-    top: 0; 
-    z-index: 2;
-    background-color: #000; /* هدر مشکی */
-    color: #fff; /* متن سفید */
+  th.tf-top {
+    position: sticky;
+    top: 0;
+    background-color: #000;
+    color: #fff;
+    z-index: 4;
+  }
+
+  th.tf-bottom {
+    position: sticky;
+    top: 30px; /* ارتفاع ردیف اول هدر */
+    background-color: #000;
+    color: #fff;
+    z-index: 3;
   }
 
   /* Sticky first column (coin names) */
   td:first-child, th:first-child {
     position: sticky;
     left: 0;
-    background-color: #000; /* هدر مشکی برای th و زمینه کوین */
+    background-color: #000;
     color: #fff;
-    z-index: 3;
-    border-right: 3px solid black; /* مرز 3px مشکی */
+    z-index: 5;
+    border-right: 3px solid black;
   }
 
-  /* مرز بین تایم فریم‌ها */
+  /* Border between timeframes */
   th.tf-header {
     border-right: 3px solid black;
   }
@@ -148,10 +155,10 @@ async function generateTable() {
     // ساخت جدول با دو ردیف header
     let tableHTML = '<table>';
 
-    // ردیف اول: تایم فریم‌ها با colspan
+    // ردیف اول: تایم فریم‌ها
     tableHTML += '<tr><th rowspan="2">کوین</th>';
     selectedTFs.forEach(tf => {
-        tableHTML += `<th class="tf-header" colspan="${selectedFields.length}">${tf}</th>`;
+        tableHTML += `<th class="tf-top tf-header" colspan="${selectedFields.length}">${tf}</th>`;
     });
     tableHTML += '</tr>';
 
@@ -159,7 +166,7 @@ async function generateTable() {
     tableHTML += '<tr>';
     selectedTFs.forEach(tf => {
         selectedFields.forEach(f => {
-            tableHTML += `<th>${f}</th>`;
+            tableHTML += `<th class="tf-bottom">${f}</th>`;
         });
     });
     tableHTML += '</tr>';
