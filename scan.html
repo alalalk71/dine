@@ -2,7 +2,7 @@
 <html lang="fa">
 <head>
 <meta charset="UTF-8">
-<title>Scan Matrix Corrected</title>
+<title>Scan Matrix Final</title>
 <style>
   body { font-family: Tahoma, sans-serif; padding: 20px; }
   h3 { margin-top: 20px; margin-bottom: 5px; }
@@ -11,6 +11,8 @@
   table { border-collapse: collapse; margin-top: 20px; width: 100%; table-layout: fixed; }
   th, td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; font-size: 14px; }
   th { background-color: #eee; }
+  th.tf-header { background-color: #ddd; font-weight: bold; }
+  td div { display: flex; justify-content: center; gap: 2px; }
 </style>
 </head>
 <body>
@@ -97,5 +99,38 @@ async function generateTable() {
     });
     allCoins = Array.from(allCoins).sort();
 
-    // ساخت جدول ماتریسی: ردیف = کوین، ستون = فیلدها
+    // ساخت جدول ماتریسی: ستون‌ها = تایم فریم × فیلد
     let tableHTML = '<table><tr><th>کوین</th>';
+    selectedTFs.forEach(tf => {
+        selectedFields.forEach(f => {
+            tableHTML += `<th class="tf-header">${tf}<br>${f}</th>`;
+        });
+    });
+    tableHTML += '</tr>';
+
+    allCoins.forEach(coin => {
+        tableHTML += `<tr><td>${coin}</td>`;
+        selectedTFs.forEach(tf => {
+            selectedFields.forEach(f => {
+                let exists = false;
+                for(const cat of selectedCats){
+                    if(data[cat] && data[cat][tf] && data[cat][tf][coin] && data[cat][tf][coin][f] !== undefined){
+                        exists = true;
+                        break;
+                    }
+                }
+                tableHTML += `<td>${exists ? '✅' : '❌'}</td>`;
+            });
+        });
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</table>';
+    resultContainer.innerHTML = tableHTML;
+}
+
+init();
+</script>
+
+</body>
+</html>
