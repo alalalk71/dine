@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>Scan 2 - Matrix Filter</title>
+<style>
+  body { font-family: Tahoma, sans-serif; padding: 20px; }
+  h3 { margin-top: 20px; margin-bottom: 5px; }
+  .checkbox-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; }
+  .checkbox-row div { display: flex; align-items: center; gap: 5px; }
+
+  /* Scroll container */
+  .table-container {
+    overflow: auto;
+    max-height: 600px; 
+    width: 100%;
+  }
+
+  table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    table-layout: fixed;
+  }
+
+  th, td {
+    border: 1px solid #333; 
+    padding: 5px; 
+    text-align: center; 
+    vertical-align: middle; 
+    font-size: 14px; 
+  }
+
+  /* Sticky headers */
+  th.tf-top {
+    position: sticky;
+    top: 0;
+    background-color: #000;
+    color: #fff;
+    z-index: 4;
+  }
+
+  th.tf-bottom {
+    position: sticky;
+    top: 30px;
+    background-color: #000;
+    color: #fff;
+    z-index: 3;
+  }
+
+  /* Sticky first column */
+  td:first-child, th:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #000;
+    color: #fff;
+    z-index: 5;
+    border-right: 3px solid black;
+  }
+
+  th.tf-header {
+    border-right: 3px solid black;
+  }
+
+  td:first-child:hover {
+    background-color: #000;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<h2>Scan 2 - فیلتر بر اساس ❌ / ✅</h2>
+
+<h3>دسته‌بندی‌ها</h3>
+<div id="categories" class="checkbox-row"></div>
+
+<h3>تایم فریم‌ها</h3>
+<div id="timeframes" class="checkbox-row"></div>
+
+<h3>فیلدها (انتخاب وضعیت)</h3>
+<div id="fields" class="checkbox-row"></div>
+
+<button onclick="generateTable()">نمایش جدول</button>
+
+<div class="table-container" id="result"></div>
+
+<script>
+const dataUrl = 'https://raw.githubusercontent.com/alalalk71/dine/refs/heads/main/data.json';
+
+const timeframesList = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d","3d","1w"];
+const fieldsList = ["cm55","m55","m200","cm200","dm","dr","mr","sros","srob","srd",
+"cci14_ob","cci14_os","cci14_s","cci14_n","cci14_m","cci50_ob","cci50_os","cci50_s",
+"cci50_n","cci50_m","obv_dn","obv_ds","obv_m"];
+
+async function loadData() {
+    const res = await fetch(dataUrl);
+    return await res.json();
+}
+
+// ایجاد گزینه های ❌ و ✅ برای هر فیلد
+function createFieldSelector(field) {
+    const div = document.createElement('div');
+    const label = document.createElement('span');
+    label.textContent = field + ": ";
+    div.appendChild(label);
+
+    ['❌','✅'].forEach(val => {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = val;
+        cb.id = `field_${field}_${val}`;
+        const lbl = document.createElement('label');
+        lbl.htmlFor = cb.id;
+        lbl.textContent = val;
+        div.appendChild(cb);
+        div.appendChild(lbl);
+    });
+
+    return div;
+}
+
+// ایجاد چک‌باکس ساده
+function createCheckbox(id, label) {
+    const div = document.createElement('div');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = id;
+    const lbl = document.createElement('label');
+    lbl.htmlFor = id;
+    lbl.textContent = label;
+    div.appendChild(cb);
+    div.appendChild(lbl);
+    return div;
+}
+
+async function init() {
+    const data = await loadData();
+
+    const catContainer = document.getElementById('categories');
+    Object.keys(data).forEach(cat => {
+        catContainer.appendChild(createCheckbox('cat_' + cat, cat));
+    });
+
+    const tfContainer = document.getElementById('timeframes');
+    timeframesList.forEach(tf => {
+        tfContainer.appendChild(createCheckbox('tf_' + tf, tf));
+    });
+
+    const fieldContainer = document.getElementById('fields');
+    fieldsList.forEach(f => {
+        fieldContainer.appendChild(createFieldSelector(f));
+    });
+}
+
+async function generateTable() {
+    const data = await loadData();
+    const resultContainer = document.getElementById('result');
+
+    const selectedCats = Array.from(document.querySelectorAll('#categories input:checked')).map(cb => cb.id.replace('cat_',''));
+    const selectedTFs = Array.from(document.querySelectorAll('#timeframes input:checked')).map(cb => cb.id.replace('tf_',''));
+
+    // فیلتر هر فیلد
+    const fieldFilters = {};
+    fieldsList.forEach(f => {
+        const checkedVals = Array.from(document.querySelectorAll(`#field_${f}_❌, #field_${f}_✅`))
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        if(checkedVals.length) fieldFilters[f] = checkedVals; // فقط اگر انتخاب شده باشد
+    });
+
+    if(selectedCats.length === 0 || selectedTFs.length === 0){
+        resultContainer.innerHTML = "<p>لطفاً حداقل یک دسته‌بندی و یک تایم فریم انتخاب کنید.</p>";
+        return;
+    }
+
+    let allCoins = new Set();
+    selectedCats.forEach(cat => {
+        Object.keys(data[cat]).forEach(coin => allCoins.add(coin));
+    });
+    allCoins = Array.from(allCoins).sort();
+
+    // ساخت جدول
+    let tableHTML = '<table>';
+
+    // هدر تایم فریم
+    tableHTML += '<tr><th rowspan="2">کوین</th>';
+    selectedTFs.forEach(tf => {
+        tableHTML += `<th class="tf-top tf-header" colspan="${fieldsList.length}">${tf}</th>`;
+    });
+    tableHTML += '</tr>';
+
+    // هدر فیلدها
+    tableHTML += '<tr>';
+    selectedTFs.forEach(tf => {
+        fieldsList.forEach(f => {
+            tableHTML += `<th class="tf-bottom">${f}</th>`;
+        });
+    });
+    tableHTML += '</tr>';
+
+    // ردیف‌ها: کوین‌ها
+    allCoins.forEach(coin => {
+        let showCoin = true;
+
+        // بررسی فیلترهای ❌ / ✅
+        selectedTFs.forEach(tf => {
+            for(const f in fieldFilters){
+                let matched = false;
+                for(const cat of selectedCats){
+                    if(data[cat] && data[cat][coin] && data[cat][coin][tf] && data[cat][coin][tf][f + "_fmt"] !== undefined){
+                        const val = data[cat][coin][tf][f + "_fmt"];
+                        if(fieldFilters[f].includes(val)){
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+                if(!matched) { showCoin = false; break; }
+            }
+        });
+
+        if(showCoin){
+            tableHTML += `<tr><td>${coin}</td>`;
+            selectedTFs.forEach(tf => {
+                fieldsList.forEach(f => {
+                    let value = '❌';
+                    for(const cat of selectedCats){
+                        if(data[cat] && data[cat][coin] && data[cat][coin][tf] && data[cat][coin][tf][f + "_fmt"] !== undefined){
+                            value = data[cat][coin][tf][f + "_fmt"];
+                            break;
+                        }
+                    }
+                    tableHTML += `<td>${value}</td>`;
+                });
+            });
+            tableHTML += '</tr>';
+        }
+    });
+
+    tableHTML += '</table>';
+    resultContainer.innerHTML = tableHTML;
+}
+
+init();
+</script>
+
+</body>
+</html>
